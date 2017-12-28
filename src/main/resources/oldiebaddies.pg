@@ -1,0 +1,9 @@
+ratings = LOAD '/user/cloudera/u.data' AS (userId:int, movieId:int, rating:int,ratingTime:int);
+metadata = LOAD '/user/cloudera/u.item' USING PigStorage('|') AS (movieId:int, movieTitle:chararray, releaseDate:chararray, videoRelease:chararray, imdbLink:chararray);
+nameLookUp = FOREACH metadata GENERATE movieId,movieTitle,ToUnixTime(ToDate(releaseDate,'dd-MMM-yyyy')) AS releaseTime;
+ratingsByMovie = GROUP ratings BY movieId;
+avgRatings = FOREACH ratingsByMovie GENERATE group AS movieId, AVG(ratings.rating) AS avgRatings, COUNT(ratings.rating) as cntRatings;
+oneStarMovies = FILTER avgRatings BY avgRatings < 2.0;
+oneStartsWithName = JOIN oneStarMovies BY movieId, nameLookUp BY movieId;
+oldestFirst = ORDER oneStartsWithName BY cntRatings DESC;
+DUMP oldestFirst;
